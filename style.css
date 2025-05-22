@@ -42,7 +42,6 @@ body {
     margin: 0 auto; 
 }
 
-/* Estilos para los elementos del gráfico */
 .axis path,
 .axis line {
     fill: none;
@@ -55,47 +54,46 @@ body {
     fill: #555;
 }
 
-.axis-label { /* Para etiquetas de Eje X e Y */
+.axis-label { 
     font-size: 12px;
     fill: #333;
 }
 
-
 .lap-line {
     fill: none;
-    stroke-width: 3.5px; /* Más gruesas */
-    opacity: 0.9;
+    stroke-width: 10px; /* Aumentado significativamente */
+    opacity: 0.8; /* Ligeramente menos opaco para ver superposiciones */
 }
 
 .driver-current-dot {
-    stroke-width: 1.5px; 
-    /* fill y stroke (borde del punto) se establecen desde JS */
+    /* fill se establece desde JS */
+    stroke: none; /* Sin borde para el punto */
 }
 
 .driver-label {
-    font-size: 11px; /* Un poco más grande */
+    font-size: 10px; /* Reducido un poco si las líneas son muy gruesas */
     font-weight: bold;
     dominant-baseline: middle;
     text-anchor: start;
-    paint-order: stroke; /* Dibuja el borde primero, luego el relleno */
+    paint-order: stroke; 
     stroke: white; 
-    stroke-width: 3px; /* Borde más grueso para mejor legibilidad */
+    stroke-width: 2.5px; 
     stroke-linejoin: round;
     /* fill se establece desde JS */
 }
 
 .grid-line {
-    stroke: #e0e0e0;
-    stroke-dasharray: "2,2"; 
+    stroke: #e9e9e9; /* Más claro */
+    stroke-dasharray: "2,3"; 
 }
 
 .lap-marker-line {
-    stroke: #bbbbbb; /* Un poco más oscuro que el grid */
-    stroke-dasharray: "4,4"; /* Guiones un poco más grandes */
-    stroke-width: 1px; /* Más visibles */
+    stroke: #cccccc; 
+    stroke-dasharray: "4,4"; 
+    stroke-width: 0.8px; 
 }
 .lap-marker-label {
     font-size: 10px; 
-    fill: #777;   /* Un poco más oscuro */
+    fill: #777;   
     text-anchor: middle;
 }

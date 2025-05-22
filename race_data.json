@@ -68,6 +68,7 @@
       "driverAbbreviation": "VER",
       "teamColor": "#808080",
       "teamName": "Red Bull Racing",
+      "fullName": "Max Verstappen",
       "laps": [
         {
           "lapNumber": 1,
@@ -531,6 +532,7 @@
       "driverAbbreviation": "PER",
       "teamColor": "#808080",
       "teamName": "Red Bull Racing",
+      "fullName": "Sergio Perez",
       "laps": [
         {
           "lapNumber": 1,
@@ -994,6 +996,7 @@
       "driverAbbreviation": "ALO",
       "teamColor": "#808080",
       "teamName": "Aston Martin",
+      "fullName": "Fernando Alonso",
       "laps": [
         {
           "lapNumber": 1,
@@ -1457,6 +1460,7 @@
       "driverAbbreviation": "SAI",
       "teamColor": "#808080",
       "teamName": "Ferrari",
+      "fullName": "Carlos Sainz",
       "laps": [
         {
           "lapNumber": 1,
@@ -1920,6 +1924,7 @@
       "driverAbbreviation": "HAM",
       "teamColor": "#808080",
       "teamName": "Mercedes",
+      "fullName": "Lewis Hamilton",
       "laps": [
         {
           "lapNumber": 1,
@@ -2383,6 +2388,7 @@
       "driverAbbreviation": "STR",
       "teamColor": "#808080",
       "teamName": "Aston Martin",
+      "fullName": "Lance Stroll",
       "laps": [
         {
           "lapNumber": 1,
@@ -2846,6 +2852,7 @@
       "driverAbbreviation": "RUS",
       "teamColor": "#808080",
       "teamName": "Mercedes",
+      "fullName": "George Russell",
       "laps": [
         {
           "lapNumber": 1,
@@ -3309,6 +3316,7 @@
       "driverAbbreviation": "BOT",
       "teamColor": "#808080",
       "teamName": "Alfa Romeo",
+      "fullName": "Valtteri Bottas",
       "laps": [
         {
           "lapNumber": 1,
@@ -3772,6 +3780,7 @@
       "driverAbbreviation": "GAS",
       "teamColor": "#808080",
       "teamName": "Alpine",
+      "fullName": "Pierre Gasly",
       "laps": [
         {
           "lapNumber": 1,
@@ -4235,6 +4244,7 @@
       "driverAbbreviation": "ALB",
       "teamColor": "#808080",
       "teamName": "Williams",
+      "fullName": "Alexander Albon",
       "laps": [
         {
           "lapNumber": 1,
@@ -4698,6 +4708,7 @@
       "driverAbbreviation": "TSU",
       "teamColor": "#808080",
       "teamName": "AlphaTauri",
+      "fullName": "Yuki Tsunoda",
       "laps": [
         {
           "lapNumber": 1,
@@ -5161,6 +5172,7 @@
       "driverAbbreviation": "SAR",
       "teamColor": "#808080",
       "teamName": "Williams",
+      "fullName": "Logan Sargeant",
       "laps": [
         {
           "lapNumber": 1,
@@ -5616,6 +5628,7 @@
       "driverAbbreviation": "MAG",
       "teamColor": "#808080",
       "teamName": "Haas F1 Team",
+      "fullName": "Kevin Magnussen",
       "laps": [
         {
           "lapNumber": 1,
@@ -6071,6 +6084,7 @@
       "driverAbbreviation": "DEV",
       "teamColor": "#808080",
       "teamName": "AlphaTauri",
+      "fullName": "Nyck De Vries",
       "laps": [
         {
           "lapNumber": 1,
@@ -6526,6 +6540,7 @@
       "driverAbbreviation": "HUL",
       "teamColor": "#808080",
       "teamName": "Haas F1 Team",
+      "fullName": "Nico Hulkenberg",
       "laps": [
         {
           "lapNumber": 1,
@@ -6981,6 +6996,7 @@
       "driverAbbreviation": "ZHO",
       "teamColor": "#808080",
       "teamName": "Alfa Romeo",
+      "fullName": "Guanyu Zhou",
       "laps": [
         {
           "lapNumber": 1,
@@ -7436,6 +7452,7 @@
       "driverAbbreviation": "NOR",
       "teamColor": "#808080",
       "teamName": "McLaren",
+      "fullName": "Lando Norris",
       "laps": [
         {
           "lapNumber": 1,
@@ -7883,6 +7900,7 @@
       "driverAbbreviation": "OCO",
       "teamColor": "#808080",
       "teamName": "Alpine",
+      "fullName": "Esteban Ocon",
       "laps": [
         {
           "lapNumber": 1,
@@ -8218,6 +8236,7 @@
       "driverAbbreviation": "LEC",
       "teamColor": "#808080",
       "teamName": "Ferrari",
+      "fullName": "Charles Leclerc",
       "laps": [
         {
           "lapNumber": 1,
@@ -8537,6 +8556,7 @@
       "driverAbbreviation": "PIA",
       "teamColor": "#808080",
       "teamName": "McLaren",
+      "fullName": "Oscar Piastri",
       "laps": [
         {
           "lapNumber": 1,
