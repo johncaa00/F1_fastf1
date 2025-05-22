@@ -1,0 +1,101 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; 
+}
+
+.chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    text-align: center; 
+}
+
+#race-title {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+#animation-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px; 
+    align-items: center; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+}
+
+#animation-controls label {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+#race-chart {
+    display: block; 
+    margin: 0 auto; 
+}
+
+/* Estilos para los elementos del gráfico */
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #ccc;
+    shape-rendering: crispEdges; 
+}
+
+.axis text {
+    font-size: 10px;
+    fill: #555;
+}
+
+.axis-label { /* Para etiquetas de Eje X e Y */
+    font-size: 12px;
+    fill: #333;
+}
+
+
+.lap-line {
+    fill: none;
+    stroke-width: 3.5px; /* Más gruesas */
+    opacity: 0.9;
+}
+
+.driver-current-dot {
+    stroke-width: 1.5px; 
+    /* fill y stroke (borde del punto) se establecen desde JS */
+}
+
+.driver-label {
+    font-size: 11px; /* Un poco más grande */
+    font-weight: bold;
+    dominant-baseline: middle;
+    text-anchor: start;
+    paint-order: stroke; /* Dibuja el borde primero, luego el relleno */
+    stroke: white; 
+    stroke-width: 3px; /* Borde más grueso para mejor legibilidad */
+    stroke-linejoin: round;
+    /* fill se establece desde JS */
+}
+
+.grid-line {
+    stroke: #e0e0e0;
+    stroke-dasharray: "2,2"; 
+}
+
+.lap-marker-line {
+    stroke: #bbbbbb; /* Un poco más oscuro que el grid */
+    stroke-dasharray: "4,4"; /* Guiones un poco más grandes */
+    stroke-width: 1px; /* Más visibles */
+}
+.lap-marker-label {
+    font-size: 10px; 
+    fill: #777;   /* Un poco más oscuro */
+    text-anchor: middle;
+}

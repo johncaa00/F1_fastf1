@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Animation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="chart-container">
+        <h1 id="race-title">Race Position Chart</h1>
+        <div id="animation-controls">
+            <button id="play-pause-button">Play</button>
+            <label for="lap-slider">Time: <span id="current-lap-display">00:00</span>/<span id="total-laps-display">00:00</span></label>
+            <input type="range" id="lap-slider" min="0" value="0" step="0.1" style="width: 300px;">
+            <label for="speed-slider">Speed:</label>
+            <input type="range" id="speed-slider" min="1" max="120" value="30" step="1"> <!-- ms per lap -->
+        </div>
+        <svg id="race-chart"></svg>
+    </div>
+
+    <!-- Incluir D3.js (desde CDN para empezar) -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Nuestro script de animación -->
+    <script src="script.js"></script>
+</body>
+</html>
