@@ -1,5 +1,5 @@
 import fastf1 as ff1
-import fastf1.plotting # Asegúrate de que plotting esté importado
+import fastf1.plotting 
 import pandas as pd
 import json
 import os
@@ -13,254 +13,220 @@ METROS_PISTA_PROMEDIO = 5412
 # --- Habilitar el caché de FastF1 ---
 CACHE_DIR = 'fastf1_cache'
 if not os.path.exists(CACHE_DIR):
-    try:
-        os.makedirs(CACHE_DIR)
-        print(f"Directorio de caché '{CACHE_DIR}' creado.")
-    except OSError as e:
-        print(f"Error al crear el directorio de caché '{CACHE_DIR}': {e}")
-        exit()
-try:
-    ff1.Cache.enable_cache(CACHE_DIR)
-except Exception as e:
-    print(f"Error al habilitar el caché de FastF1: {e}")
-    exit()
+    try: os.makedirs(CACHE_DIR); print(f"Directorio de caché '{CACHE_DIR}' creado.")
+    except OSError as e: print(f"Error creando directorio caché: {e}"); exit()
+try: ff1.Cache.enable_cache(CACHE_DIR)
+except Exception as e: print(f"Error habilitando caché: {e}"); exit()
 
 print(f"Cargando datos para {RACE_EVENT} {RACE_YEAR}...")
 try:
     session = ff1.get_session(RACE_YEAR, RACE_EVENT, 'R')
     session.load(laps=True, telemetry=False, weather=False, messages=False)
     laps_data = session.laps
-except Exception as e:
-    print(f"Error al cargar datos de la sesión: {e}")
-    exit()
+except Exception as e: print(f"Error cargando sesión: {e}"); exit()
 
-if laps_data is None or laps_data.empty:
-    print(f"No se encontraron datos de vueltas para {RACE_EVENT} {RACE_YEAR}.")
-    exit()
-
+if laps_data is None or laps_data.empty: print(f"No hay datos de vueltas para {RACE_EVENT} {RACE_YEAR}."); exit()
 print("Datos cargados. Procesando...")
 
-actual_metros_pista = METROS_PISTA_PROMEDIO # De momento, mantenemos el valor fijo
-# (La lógica para obtenerlo dinámicamente puede añadirse después si es necesario)
-print(f"Usando METROS_PISTA_PROMEDIO = {actual_metros_pista}")
-
+actual_metros_pista = METROS_PISTA_PROMEDIO
 total_laps_race_from_data = int(laps_data['LapNumber'].max())
 event_name = session.event['EventName']
-event_year = RACE_YEAR
+event_year_from_session = session.event.year
+num_total_starters = len(laps_data['DriverNumber'].unique()) # Número de pilotos que iniciaron
 
 output_data = {
-    "eventName": event_name,
-    "eventYear": event_year,
-    "totalRaceTimeSeconds": 0,
-    "totalLaps": total_laps_race_from_data,
+    "eventName": event_name, "eventYear": event_year_from_session,
+    "totalRaceTimeSeconds": 0, "totalLaps": total_laps_race_from_data,
     "metrosPistaPromedio": actual_metros_pista,
-    "marcasDeVueltaIndiceProg": {},
-    "driversData": []
+    "marcasDeVueltaIndiceProg": {}, "driversData": []
 }
 
-# --- Obtener información de pilotos y COLORES (Lógica Revisada) ---
 driver_info_map = {} 
-
-# Primero, poblar con session.results si está disponible, ya que suele tener buena info
+# print("\n--- Obteniendo Colores ---") # Descomentar para depurar colores
 if hasattr(session, 'results') and session.results is not None and not session.results.empty:
     for _, r_info in session.results.iterrows():
-        driver_number_str = str(r_info['DriverNumber']) # Usar string como clave consistente
-        abbr = r_info['Abbreviation']
-        team_name = r_info['TeamName'] # Nombre completo del equipo
-        full_name = r_info['FullName'] if 'FullName' in r_info else f"{r_info.get('FirstName', '')} {r_info.get('LastName', '')}".strip()
-
-
-        # Lógica para obtener color
-        color = '#808080' # Color de fallback
-        
-        # Intentar obtener color del piloto primero
+        dr_str = str(r_info['DriverNumber']); abbr = r_info['Abbreviation']; team_orig = r_info['TeamName']
+        full_name = r_info.get('FullName', f"{r_info.get('FirstName', '')} {r_info.get('LastName', '')}".strip())
+        color = '#808080'
         try:
-            # FastF1 v3.1+ usa session_event_year y session_type
-            # Para versiones anteriores, year y session_type
-            # Vamos a intentar detectar la versión de fastf1 para usar los params correctos
-            # o simplemente probar ambos si es más fácil que detectar la versión
-            
-            # Intento para FastF1 >= v3.1 (más nuevo)
-            # Necesitamos el año del evento de la sesión, no RACE_YEAR directamente a veces
-            session_event_year_for_color = session.event.SessionInfo.Meeting.FIAConfig.CurrentYear if hasattr(session.event, 'SessionInfo') else RACE_YEAR
+            col_team = fastf1.plotting.get_team_color(team_orig, session=session)
+            if pd.notna(col_team) and isinstance(col_team, str) and col_team.startswith('#'): color = col_team
+        except Exception: pass # print(f"Error color para {abbr}: {e}")
+        driver_info_map[dr_str] = {"abbreviation": abbr, "teamName": team_orig, "fullName": full_name, "teamColor": color}
 
-            # print(f"Debug Color - Piloto: {abbr}, Equipo: {team_name}, Año Sesión: {session_event_year_for_color}, Nombre Sesión: {session.name}")
-
-            col_candidate_driver = fastf1.plotting.get_driver_color(abbr, session_event_year=session_event_year_for_color, session_type=session.name)
-            if pd.notna(col_candidate_driver) and isinstance(col_candidate_driver, str) and col_candidate_driver.startswith('#'):
-                color = col_candidate_driver
-                # print(f"  Color encontrado para piloto {abbr}: {color}")
-            else:
-                # Si no se encuentra por piloto, intentar por equipo
-                col_candidate_team = fastf1.plotting.team_color(team_name, session_event_year=session_event_year_for_color)
-                if pd.notna(col_candidate_team) and isinstance(col_candidate_team, str) and col_candidate_team.startswith('#'):
-                    color = col_candidate_team
-                    # print(f"  Color encontrado para equipo {team_name} (via piloto {abbr}): {color}")
-                # else:
-                    # print(f"  Color NO encontrado para equipo {team_name} (via piloto {abbr}). Fallback a gris.")
-        except AttributeError: # Podría ser una versión más antigua de FastF1
-            try:
-                col_candidate_driver = fastf1.plotting.get_driver_color(abbr, year=RACE_YEAR, session_name=session.name) # session_name o session_type
-                if pd.notna(col_candidate_driver) and isinstance(col_candidate_driver, str) and col_candidate_driver.startswith('#'):
-                     color = col_candidate_driver
-                else:
-                    col_candidate_team = fastf1.plotting.team_color(team_name, year=RACE_YEAR)
-                    if pd.notna(col_candidate_team) and isinstance(col_candidate_team, str) and col_candidate_team.startswith('#'):
-                        color = col_candidate_team
-            except Exception as e_color_old:
-                print(f"Advertencia: Falló el intento de color (método antiguo) para {abbr}/{team_name}: {e_color_old}")
-        except Exception as e_color_new:
-            print(f"Advertencia: Falló el intento de color (método nuevo) para {abbr}/{team_name}: {e_color_new}")
-
-
-        driver_info_map[driver_number_str] = {
-            "abbreviation": abbr,
-            "teamName": team_name,
-            "fullName": full_name,
-            "teamColor": color
-        }
-
-# Complementar con laps_data para pilotos que no estén en results (ej. no clasificados)
-# o si results no tenía toda la info
-unique_driver_numbers_laps = laps_data['DriverNumber'].astype(str).unique() # Asegurar que sean strings
-
+unique_driver_numbers_laps = laps_data['DriverNumber'].astype(str).unique()
 for dr_num_str_laps in unique_driver_numbers_laps:
-    if dr_num_str_laps not in driver_info_map:
+    if dr_num_str_laps in driver_info_map and driver_info_map[dr_num_str_laps]['teamColor'] != '#808080': continue
+    try:
+        subset = laps_data[laps_data['DriverNumber'] == dr_num_str_laps].iloc[0]
+        abbr_l = subset['Driver']; team_l = subset['Team']; color_l = '#808080'
         try:
-            # Tomar la primera aparición del piloto en laps_data para obtener su 'Driver' (abbr) y 'Team'
-            driver_laps_subset = laps_data[laps_data['DriverNumber'] == dr_num_str_laps].iloc[0]
-            abbr = driver_laps_subset['Driver'] # En laps_data, 'Driver' suele ser la abreviatura
-            team_name = driver_laps_subset['Team'] # Y 'Team' el nombre del equipo
-            
-            # Reintentar lógica de color para este piloto/equipo
-            color = '#808080'
-            session_event_year_for_color = session.event.SessionInfo.Meeting.FIAConfig.CurrentYear if hasattr(session.event, 'SessionInfo') else RACE_YEAR
-            # print(f"Debug Color (desde laps_data) - Piloto: {abbr}, Equipo: {team_name}, Año Sesión: {session_event_year_for_color}, Nombre Sesión: {session.name}")
+            col_team_l = fastf1.plotting.get_team_color(team_l, session=session)
+            if pd.notna(col_team_l) and isinstance(col_team_l, str) and col_team_l.startswith('#'): color_l = col_team_l
+        except Exception: pass
+        driver_info_map[dr_num_str_laps] = {"abbreviation": abbr_l, "teamName": team_l, 
+                                            "fullName": driver_info_map.get(dr_num_str_laps, {}).get('fullName', f"Driver {abbr_l}"),
+                                            "teamColor": color_l}
+    except Exception: 
+        if dr_num_str_laps not in driver_info_map: driver_info_map[dr_num_str_laps] = {"abbreviation": f"DRV{dr_num_str_laps}", "teamName": "Unknown", "fullName": f"Driver {dr_num_str_laps}", "teamColor": "#808080"}
+# print("--- Fin Colores ---")
 
-            col_candidate_driver = fastf1.plotting.get_driver_color(abbr, session_event_year=session_event_year_for_color, session_type=session.name)
-            if pd.notna(col_candidate_driver) and isinstance(col_candidate_driver, str) and col_candidate_driver.startswith('#'):
-                color = col_candidate_driver
-            else:
-                col_candidate_team = fastf1.plotting.team_color(team_name, session_event_year=session_event_year_for_color)
-                if pd.notna(col_candidate_team) and isinstance(col_candidate_team, str) and col_candidate_team.startswith('#'):
-                    color = col_candidate_team
-            
-            driver_info_map[dr_num_str_laps] = {
-                "abbreviation": abbr,
-                "teamName": team_name,
-                "fullName": f"Driver {abbr}", # Fallback para nombre completo
-                "teamColor": color
-            }
-            print(f"Info para {abbr} (desde laps_data) añadida con color: {color}")
-        except IndexError:
-            print(f"Advertencia: No se pudo obtener información del piloto para DriverNumber {dr_num_str_laps} desde laps_data.")
-            driver_info_map[dr_num_str_laps] = {"abbreviation": f"DRV{dr_num_str_laps}", "teamName": "Unknown", "fullName": f"Driver {dr_num_str_laps}", "teamColor": "#808080"}
-        except Exception as e_laps_color:
-             print(f"Error obteniendo color para {abbr} (desde laps_data): {e_laps_color}")
-             driver_info_map[dr_num_str_laps] = {"abbreviation": abbr, "teamName": team_name, "fullName": f"Driver {abbr}", "teamColor": "#808080"}
-
-
-# --- Recopilar datos de vuelta con Índice de Progreso ---
-# (Esta parte del código no cambia con respecto a la anterior, se mantiene igual)
 max_cumulative_real_time_overall = 0
 all_laps_info_for_marks = []
+processed_drivers_for_sorting = [] 
+
+all_valid_lap_times = laps_data['LapTime'].dropna().dt.total_seconds()
+slowest_lap_time_estimate = all_valid_lap_times.max() * 1.5 if not all_valid_lap_times.empty else 300 
 
 for driver_number_str, info in driver_info_map.items():
     driver_laps_df = laps_data[laps_data['DriverNumber'] == driver_number_str].copy()
+    original_laps_for_driver = []
+    last_known_position = num_total_starters 
+    last_known_cumulative_real_time = 0
+    last_known_indice_prog_acum = 0
+    max_lap_completed_by_driver = 0
+    time_of_last_real_lap = 0 # Tiempo en el que completó su última vuelta real
 
-    if 'LapTime' not in driver_laps_df.columns or 'Position' not in driver_laps_df.columns:
-        # print(f"Advertencia: 'LapTime' o 'Position' no encontrado para {info['abbreviation']}. Saltando procesamiento de vueltas.")
-        continue
+    if not driver_laps_df.empty and 'LapTime' in driver_laps_df.columns and 'Position' in driver_laps_df.columns:
+        driver_laps_df.dropna(subset=['LapTime', 'Position'], inplace=True)
+        if not driver_laps_df.empty:
+            if pd.api.types.is_timedelta64_dtype(driver_laps_df['LapTime']):
+                driver_laps_df['IndividualLapTimeSeconds'] = driver_laps_df['LapTime'].dt.total_seconds()
+            else:
+                driver_laps_df['IndividualLapTimeSeconds'] = pd.to_numeric(driver_laps_df['LapTime'], errors='coerce')
+            driver_laps_df.dropna(subset=['IndividualLapTimeSeconds'], inplace=True)
+
+            if not driver_laps_df.empty:
+                driver_laps_df = driver_laps_df.sort_values(by='LapNumber')
+                driver_laps_df['CumulativeRealTimeSeconds'] = driver_laps_df['IndividualLapTimeSeconds'].cumsum()
+                driver_laps_df['IndiceProgresoVuelta'] = driver_laps_df['IndividualLapTimeSeconds'].apply(
+                    lambda x: (actual_metros_pista / x) if x > 0 else 0)
+                driver_laps_df['IndiceProgresoAcumulado'] = driver_laps_df['IndiceProgresoVuelta'].cumsum()
+
+                for _, row in driver_laps_df.iterrows():
+                    original_laps_for_driver.append({
+                        "lapNumber": int(row['LapNumber']), "position": int(row['Position']),
+                        "individualLapTimeSeconds": round(row['IndividualLapTimeSeconds'], 3),
+                        "cumulativeRealTimeSeconds": round(row['CumulativeRealTimeSeconds'], 3),
+                        "indiceProgresoVuelta": round(row['IndiceProgresoVuelta'], 3),
+                        "indiceProgresoAcumulado": round(row['IndiceProgresoAcumulado'], 3),
+                        "isRetiredFill": False 
+                    })
+                last_row = driver_laps_df.iloc[-1]
+                last_known_position = int(last_row['Position'])
+                last_known_cumulative_real_time = round(last_row['CumulativeRealTimeSeconds'], 3)
+                last_known_indice_prog_acum = round(last_row['IndiceProgresoAcumulado'], 3)
+                max_lap_completed_by_driver = int(last_row['LapNumber'])
+                time_of_last_real_lap = last_known_cumulative_real_time
     
-    driver_laps_df.dropna(subset=['LapTime', 'Position'], inplace=True)
-    if driver_laps_df.empty:
-        # print(f"Info: No hay vueltas válidas con LapTime y Position para {info['abbreviation']}.")
-        continue
+    processed_drivers_for_sorting.append({
+        "abbreviation": info["abbreviation"], "teamColor": info["teamColor"],
+        "teamName": info["teamName"], "fullName": info.get("fullName", info["abbreviation"]),
+        "laps_real_data": list(original_laps_for_driver), # Guardar solo las vueltas reales aquí
+        "maxLapCompleted": max_lap_completed_by_driver,
+        "lastKnownPosition": last_known_position,
+        "lastKnownIndiceProgAcum": last_known_indice_prog_acum,
+        "lastKnownCumulativeRealTime": last_known_cumulative_real_time,
+        "timeOfLastRealLap": time_of_last_real_lap
+    })
 
-    if pd.api.types.is_timedelta64_dtype(driver_laps_df['LapTime']):
-        driver_laps_df['IndividualLapTimeSeconds'] = driver_laps_df['LapTime'].dt.total_seconds()
-    else:
-        driver_laps_df['IndividualLapTimeSeconds'] = pd.to_numeric(driver_laps_df['LapTime'], errors='coerce')
+# Ordenar pilotos para asignar posiciones de retirados correctamente:
+# 1. Por número de vueltas completadas (descendente - los que más completaron van primero)
+# 2. Por su última posición conocida en su última vuelta real (ascendente - el que iba mejor clasificado va primero)
+processed_drivers_for_sorting.sort(key=lambda x: (-x["maxLapCompleted"], x["lastKnownPosition"]))
+
+# Asignar posiciones finales (incluyendo retirados) y rellenar vueltas
+next_available_position = 1
+assigned_retired_positions = {} # Para asegurar que cada retirado tenga una única posición final
+
+drivers_who_finished = [d for d in processed_drivers_for_sorting if d["maxLapCompleted"] == total_laps_race_from_data]
+retired_drivers = [d for d in processed_drivers_for_sorting if d["maxLapCompleted"] < total_laps_race_from_data]
+
+# Las posiciones de los que terminaron ya son correctas en su última vuelta real
+for driver_data in drivers_who_finished:
+    driver_data["finalAssignedPosition"] = driver_data["lastKnownPosition"] # Su posición final es la de la última vuelta
+
+# Asignar posiciones a los retirados "de abajo hacia arriba"
+# Los que se retiraron antes (menos vueltas) o iban peor, obtienen las últimas posiciones.
+# El sort ya los tiene en orden: los que más vueltas completaron (y mejor posición) están primeros entre los retirados.
+# Así que iteramos en orden inverso de esta lista de retirados para asignar P_total, P_total-1, etc.
+current_final_pos_for_retired = num_total_starters
+for driver_data in reversed(retired_drivers): # Empezar desde el que menos progresó
+    driver_data["finalAssignedPosition"] = current_final_pos_for_retired
+    current_final_pos_for_retired -= 1
+
+
+# Ahora construir el `output_data["driversData"]` final con todas las vueltas
+for driver_data_sorted in processed_drivers_for_sorting:
+    all_laps_for_this_driver_json = list(driver_data_sorted["laps_real_data"])
     
-    driver_laps_df.dropna(subset=['IndividualLapTimeSeconds'], inplace=True)
-    if driver_laps_df.empty:
-        continue
+    last_real_lap_data = {}
+    if driver_data_sorted["laps_real_data"]:
+        last_real_lap_data = driver_data_sorted["laps_real_data"][-1]
+    else: # Piloto sin vueltas reales (ej. DNS)
+        last_real_lap_data = {
+            "lapNumber": 0, "position": driver_data_sorted["finalAssignedPosition"],
+            "individualLapTimeSeconds": slowest_lap_time_estimate, 
+            "cumulativeRealTimeSeconds": 0,
+            "indiceProgresoVuelta": 0, "indiceProgresoAcumulado": 0,
+            "isRetiredFill": True
+        }
 
-    driver_laps_df = driver_laps_df.sort_values(by='LapNumber')
-    driver_laps_df['CumulativeRealTimeSeconds'] = driver_laps_df['IndividualLapTimeSeconds'].cumsum()
+    current_cumulative_time = last_real_lap_data["cumulativeRealTimeSeconds"]
     
-    driver_laps_df['IndiceProgresoVuelta'] = driver_laps_df['IndividualLapTimeSeconds'].apply(
-        lambda x: (actual_metros_pista / x) if x > 0 else 0
-    )
-    driver_laps_df['IndiceProgresoAcumulado'] = driver_laps_df['IndiceProgresoVuelta'].cumsum()
-
-    lap_data_for_json = []
-    for _, row in driver_laps_df.iterrows():
-        lap_num = int(row['LapNumber'])
-        pos = int(row['Position'])
-        ind_lap_time = round(row['IndividualLapTimeSeconds'], 3)
-        cum_real_time = round(row['CumulativeRealTimeSeconds'], 3)
-        idx_prog_vuelta = round(row['IndiceProgresoVuelta'], 3)
-        idx_prog_acum = round(row['IndiceProgresoAcumulado'], 3)
-
-        lap_data_for_json.append({
-            "lapNumber": lap_num,
-            "position": pos,
-            "individualLapTimeSeconds": ind_lap_time,
-            "cumulativeRealTimeSeconds": cum_real_time,
-            "indiceProgresoVuelta": idx_prog_vuelta,
-            "indiceProgresoAcumulado": idx_prog_acum
-        })
-        
-        all_laps_info_for_marks.append({
-            "lapNumber": lap_num,
-            "driverAbbreviation": info["abbreviation"], # Necesario para identificar P1
-            "position": pos,
-            "indiceProgresoAcumulado": idx_prog_acum
-        })
-
-        if cum_real_time > max_cumulative_real_time_overall:
-            max_cumulative_real_time_overall = cum_real_time
+    if driver_data_sorted["maxLapCompleted"] < total_laps_race_from_data:
+        for lap_fill in range(driver_data_sorted["maxLapCompleted"] + 1, total_laps_race_from_data + 1):
+            current_cumulative_time += slowest_lap_time_estimate 
+            all_laps_for_this_driver_json.append({
+                "lapNumber": lap_fill,
+                "position": driver_data_sorted["finalAssignedPosition"], # Usar la posición final asignada
+                "individualLapTimeSeconds": round(slowest_lap_time_estimate, 3),
+                "cumulativeRealTimeSeconds": round(current_cumulative_time, 3),
+                "indiceProgresoVuelta": 0,
+                "indiceProgresoAcumulado": last_real_lap_data["indiceProgresoAcumulado"], # Mantiene el último índice real
+                "isRetiredFill": True
+            })
             
-    if lap_data_for_json:
-        output_data["driversData"].append({
-            "driverAbbreviation": info["abbreviation"],
-            "teamColor": info["teamColor"], # Asegurarse de que el color del driver_info_map se usa
-            "teamName": info["teamName"],
-            "fullName": info.get("fullName", info["abbreviation"]), # Usar fullName si existe
-            "laps": lap_data_for_json
-        })
+    output_data["driversData"].append({
+        "driverAbbreviation": driver_data_sorted["abbreviation"], 
+        "teamColor": driver_data_sorted["teamColor"],
+        "teamName": driver_data_sorted["teamName"], 
+        "fullName": driver_data_sorted.get("fullName", driver_data_sorted["abbreviation"]),
+        "laps": all_laps_for_this_driver_json
+    })
+    
+    # Para marcas de vuelta y max_cumulative_real_time_overall
+    for lap_entry in all_laps_for_this_driver_json: # Usar todas las vueltas (reales y de relleno) para el tiempo total del slider
+        if not lap_entry["isRetiredFill"]: # Solo vueltas reales para marcas
+             all_laps_info_for_marks.append({
+                "lapNumber": lap_entry["lapNumber"], "driverAbbreviation": driver_data_sorted["abbreviation"],
+                "position": lap_entry["position"], "indiceProgresoAcumulado": lap_entry["indiceProgresoAcumulado"]
+            })
+        if lap_entry["cumulativeRealTimeSeconds"] > max_cumulative_real_time_overall:
+             max_cumulative_real_time_overall = lap_entry["cumulativeRealTimeSeconds"]
 
 output_data["totalRaceTimeSeconds"] = round(max_cumulative_real_time_overall, 3)
 
+# Calcular marcasDeVueltaIndiceProg (del P1 real de cada vuelta)
 if all_laps_info_for_marks:
     all_laps_df_for_marks = pd.DataFrame(all_laps_info_for_marks)
     for lap_n in range(1, total_laps_race_from_data + 1):
-        # Encontrar el piloto en P1 en esa vuelta
         p1_driver_lap_data = all_laps_df_for_marks[
-            (all_laps_df_for_marks['lapNumber'] == lap_n) &
-            (all_laps_df_for_marks['position'] == 1)
-        ]
+            (all_laps_df_for_marks['lapNumber'] == lap_n) & (all_laps_df_for_marks['position'] == 1)]
         if not p1_driver_lap_data.empty:
-            # Puede haber múltiples entradas si los datos no están perfectamente limpios, tomar la primera.
             output_data["marcasDeVueltaIndiceProg"][str(lap_n)] = round(p1_driver_lap_data['indiceProgresoAcumulado'].iloc[0], 3)
-        elif lap_n > 1 and str(lap_n-1) in output_data["marcasDeVueltaIndiceProg"]:
-             max_idx_prog_this_lap = all_laps_df_for_marks[all_laps_df_for_marks['lapNumber'] == lap_n]['indiceProgresoAcumulado'].max()
-             if pd.notna(max_idx_prog_this_lap):
-                 output_data["marcasDeVueltaIndiceProg"][str(lap_n)] = round(max_idx_prog_this_lap, 3)
+        elif lap_n > 0 : 
+             lap_n_data = all_laps_df_for_marks[all_laps_df_for_marks['lapNumber'] == lap_n]
+             if not lap_n_data.empty:
+                max_idx_prog_this_lap = lap_n_data['indiceProgresoAcumulado'].max()
+                if pd.notna(max_idx_prog_this_lap): output_data["marcasDeVueltaIndiceProg"][str(lap_n)] = round(max_idx_prog_this_lap, 3)
+             elif lap_n > 1 and str(lap_n-1) in output_data["marcasDeVueltaIndiceProg"]:
+                 output_data["marcasDeVueltaIndiceProg"][str(lap_n)] = output_data["marcasDeVueltaIndiceProg"][str(lap_n-1)]
 
-# --- Guardar a JSON ---
 try:
-    with open(OUTPUT_JSON_FILE, 'w') as f:
-        json.dump(output_data, f, indent=2)
+    with open(OUTPUT_JSON_FILE, 'w') as f: json.dump(output_data, f, indent=2)
     print(f"Datos procesados y guardados en '{OUTPUT_JSON_FILE}'")
-    # print(f"Marcas de Vuelta (Índice Progreso Acumulado del P1): {output_data['marcasDeVueltaIndiceProg']}")
-    # Imprimir un resumen de colores para verificar
     print("\nResumen de colores generados:")
-    for driver_data in output_data["driversData"]:
-        print(f"  {driver_data['driverAbbreviation']}: {driver_data['teamColor']}")
-
-except IOError as e:
-    print(f"Error al guardar el archivo JSON: {e}")
-except Exception as e_json:
-    print(f"Error durante la serialización a JSON o al procesar datos: {e_json}")
+    for driver_data in output_data["driversData"]: print(f"  {driver_data['driverAbbreviation']} ({driver_data['teamName']}): {driver_data['teamColor']}")
+except IOError as e: print(f"Error al guardar el archivo JSON: {e}")
+except Exception as e_json: print(f"Error durante la serialización o procesamiento: {e_json}")
